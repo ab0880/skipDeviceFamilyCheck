@@ -15,10 +15,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: brew install dpkg ldid xz
+
       - name: Setup Theos
-        uses: theos/setup-theos@v1
-        with:
-          theos-sdks: 'https://github.com/theos/sdks/raw/master/iPhoneOS16.5.sdk.tar.xz'
+        run: |
+          # 克隆 Theos 到工作目录
+          git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
+          echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
+
+      - name: Download iOS 16.5 SDK
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/theos/sdks
+          curl -L -o /tmp/iPhoneOS16.5.sdk.tar.xz https://github.com/theos/sdks/raw/master/iPhoneOS16.5.sdk.tar.xz
+          tar -xf /tmp/iPhoneOS16.5.sdk.tar.xz -C $GITHUB_WORKSPACE/theos/sdks
+          # 确认 SDK 目录存在
+          ls $GITHUB_WORKSPACE/theos/sdks/iPhoneOS16.5.sdk
 
       - name: Build tweak
         run: |
