@@ -1,4 +1,4 @@
-name: Build Package (rootless)
+name: Build All Schemes (rootful/rootless/roothide)
 
 on:
   push:
@@ -10,39 +10,44 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        scheme: [rootful, rootless, roothide]
+        include:
+          - scheme: rootful
+            scheme_arg: ""
+          - scheme: rootless
+            scheme_arg: "THEOS_PACKAGE_SCHEME=rootless"
+          - scheme: roothide
+            scheme_arg: "THEOS_PACKAGE_SCHEME=roothide"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: brew install dpkg ldid xz
+      - name: Set up Theos
+        uses: waruhachi/theos-action@v2.4.6
+        with:
+          theos-src: 'waruhachi/theos'
+          theos-branch: 'main'
+          sdks-src: 'waruhachi/sdks'
+          sdks-branch: 'main'
 
-      - name: Setup Theos
+      - name: Ensure iOS 16.5 SDK
         run: |
-          git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
-          echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
+          # waruhachi/sdks 仓库可能已包含，这里强制下载确保存在
+          mkdir -p $THEOS/sdks
+          curl -L --fail -o /tmp/iPhoneOS16.5.sdk.tar.xz \
+            https://raw.githubusercontent.com/waruhachi/sdks/main/iPhoneOS16.5.sdk.tar.xz
+          tar -xf /tmp/iPhoneOS16.5.sdk.tar.xz -C $THEOS/sdks
+          ls $THEOS/sdks/iPhoneOS16.5.sdk
 
-      - name: Download iOS 16.5 SDK
+      - name: Build Package
         run: |
-          mkdir -p $GITHUB_WORKSPACE/theos/sdks
-          curl -L --fail -o /tmp/iPhoneOS16.5.sdk.tar.xz https://raw.githubusercontent.com/theos/sdks/master/iPhoneOS16.5.sdk.tar.xz
-          file /tmp/iPhoneOS16.5.sdk.tar.xz
-          ls -lh /tmp/iPhoneOS16.5.sdk.tar.xz
-          tar -xf /tmp/iPhoneOS16.5.sdk.tar.xz -C $GITHUB_WORKSPACE/theos/sdks
-          ls $GITHUB_WORKSPACE/theos/sdks/iPhoneOS16.5.sdk
+          make clean package ${{ matrix.scheme_arg }}
 
-      - name: Build tweak
-        run: |
-          make package FINALPACKAGE=1
-
-      - name: Upload .deb artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skipDeviceFamilyCheck-rootless
-          path: packages/*.deb
-      - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: skipDeviceFamilyCheck-rootless
+          name: ${{ matrix.scheme }}-package
           path: packages/*.deb
