@@ -33,14 +33,18 @@ jobs:
           sdks-src: 'waruhachi/sdks'
           sdks-branch: 'main'
 
-      - name: Ensure iOS 16.5 SDK
+      - name: Ensure iOS 16.5 SDK (fallback)
         run: |
-          # waruhachi/sdks 仓库可能已包含，这里强制下载确保存在
-          mkdir -p $THEOS/sdks
-          curl -L --fail -o /tmp/iPhoneOS16.5.sdk.tar.xz \
-            https://raw.githubusercontent.com/waruhachi/sdks/main/iPhoneOS16.5.sdk.tar.xz
-          tar -xf /tmp/iPhoneOS16.5.sdk.tar.xz -C $THEOS/sdks
-          ls $THEOS/sdks/iPhoneOS16.5.sdk
+          if [ ! -d "$THEOS/sdks/iPhoneOS16.5.sdk" ]; then
+            echo "iOS 16.5 SDK not found, downloading..."
+            mkdir -p $THEOS/sdks
+            curl -L --fail -o /tmp/iPhoneOS16.5.sdk.tar.xz \
+              https://raw.githubusercontent.com/theos/sdks/master/iPhoneOS16.5.sdk.tar.xz
+            tar -xf /tmp/iPhoneOS16.5.sdk.tar.xz -C $THEOS/sdks
+          else
+            echo "iOS 16.5 SDK already present."
+          fi
+          ls -d $THEOS/sdks/iPhoneOS16.5.sdk
 
       - name: Build Package
         run: |
