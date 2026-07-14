@@ -1,0 +1,31 @@
+name: Build Package (rootless)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Theos
+        uses: theos/setup-theos@v1
+        with:
+          theos-sdks: 'https://github.com/theos/sdks/raw/master/iPhoneOS16.5.sdk.tar.xz'
+
+      - name: Build tweak
+        run: |
+          make package FINALPACKAGE=1
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skipDeviceFamilyCheck-rootless
+          path: packages/*.deb
